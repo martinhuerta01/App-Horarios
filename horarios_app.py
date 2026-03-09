@@ -176,6 +176,7 @@ def validar_usuario(usuario: str, password: str) -> bool:
 # ══════════════════════════════════════════════════════════════════
 COLS_EMP = ["id", "nombre", "activo", "telefono", "dni", "zona", "vehiculo", "patente", "observaciones"]
 
+@st.cache_data(ttl=30)
 def cargar_empleados(solo_activos=False) -> list:
     ws = get_ws("empleados")
     records = ws.get_all_records()
@@ -197,6 +198,7 @@ def cargar_empleados(solo_activos=False) -> list:
         empleados = [e for e in empleados if e["activo"]]
     return sorted(empleados, key=lambda x: x["nombre"])
 
+@st.cache_resource
 def _init_empleados_ws():
     ws = get_ws("empleados")
     _ensure_headers(ws, COLS_EMP)
@@ -247,6 +249,7 @@ def actualizar_empleado(emp_id: str, emp: dict):
 # ══════════════════════════════════════════════════════════════════
 COLS_REG = ["id", "empleado_id", "nombre", "fecha", "hora_entrada", "hora_salida", "horas_trabajadas", "diferencia", "inicio_ruta", "fin_ruta"]
 
+@st.cache_data(ttl=30)
 def cargar_registros() -> list:
     ws = get_ws("registros")
     records = ws.get_all_records()
@@ -281,6 +284,7 @@ def _ensure_headers(ws, cols: list):
         new_row = existing + missing
         ws.update("1:1", [new_row])
 
+@st.cache_resource
 def _init_registros_ws():
     ws = get_ws("registros")
     _ensure_headers(ws, COLS_REG)
