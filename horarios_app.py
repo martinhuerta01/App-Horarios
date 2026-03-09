@@ -42,16 +42,16 @@ code, .mono { font-family: 'DM Mono', monospace; }
 [data-testid="metric-container"] [data-testid="stMetricValue"] { color: #1e3a8a !important; font-size: 22px !important; font-weight: 700 !important; }
 
 [data-testid="stSidebar"] .stButton > button {
-    background: #f3f4f6 !important;
-    color: #111827 !important;
-    border: 1px solid #e2e6ea !important;
+    background: #1f2937 !important;
+    color: #ffffff !important;
+    border: none !important;
     border-radius: 8px !important;
     font-weight: 500 !important;
     text-align: left !important;
 }
 [data-testid="stSidebar"] .stButton > button:hover {
-    background: #e5e7eb !important;
-    color: #111827 !important;
+    background: #374151 !important;
+    color: #ffffff !important;
 }
 [data-testid="stSidebar"] .stButton > button[kind="primary"] {
     background: #1e3a8a !important;
@@ -249,7 +249,7 @@ def actualizar_empleado(emp_id: str, emp: dict):
 # ══════════════════════════════════════════════════════════════════
 COLS_REG = ["id", "empleado_id", "nombre", "fecha", "hora_entrada", "hora_salida", "horas_trabajadas", "diferencia", "inicio_ruta", "fin_ruta"]
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=10)
 def cargar_registros() -> list:
     ws = get_ws("registros")
     records = ws.get_all_records()
@@ -311,6 +311,7 @@ def guardar_registro(reg: dict):
         reg.get("fin_ruta", ""),
     ])
     st.cache_data.clear()
+    st.cache_resource.clear()
     return True, "OK"
 
 def actualizar_registro(reg_id: str, reg: dict):
