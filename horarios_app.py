@@ -270,19 +270,16 @@ def cargar_registros() -> list:
     return result
 
 def _ensure_headers(ws, cols: list):
-    """Agrega encabezados faltantes automaticamente sin borrar datos."""
+    """Agrega encabezados faltantes en una sola llamada a la API."""
     vals = ws.get_all_values()
     if not vals:
         ws.append_row(cols)
-        st.cache_data.clear()
         return
     existing = vals[0]
-    for col in cols:
-        if col not in existing:
-            col_idx = len(existing) + 1
-            ws.update_cell(1, col_idx, col)
-            existing.append(col)
-    st.cache_data.clear()
+    missing = [c for c in cols if c not in existing]
+    if missing:
+        new_row = existing + missing
+        ws.update("1:1", [new_row])
 
 def _init_registros_ws():
     ws = get_ws("registros")
