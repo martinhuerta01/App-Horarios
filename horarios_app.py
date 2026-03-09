@@ -199,7 +199,12 @@ def cargar_empleados(solo_activos=False) -> list:
 
 def _init_empleados_ws():
     ws = get_ws("empleados")
-    _ensure_headers(ws, COLS_EMP)
+    if not ws.get_all_values():
+        ws.append_row(COLS_EMP)
+        # Empleados iniciales
+        for nombre in ["Maxi", "Sergio", "Hugo", "Lautaro"]:
+            ws.append_row([str(uuid.uuid4())[:8], nombre, "1", "", "", "", "", "", ""])
+        st.cache_data.clear()
 
 def guardar_empleado_nuevo(emp: dict):
     ws = get_ws("empleados")
@@ -245,7 +250,7 @@ def actualizar_empleado(emp_id: str, emp: dict):
 # ══════════════════════════════════════════════════════════════════
 # DATOS: REGISTROS
 # ══════════════════════════════════════════════════════════════════
-COLS_REG = ["id", "empleado_id", "nombre", "fecha", "hora_entrada", "hora_salida", "horas_trabajadas", "diferencia", "inicio_ruta", "fin_ruta"]
+COLS_REG = ["id", "empleado_id", "nombre", "fecha", "hora_entrada", "hora_salida", "horas_trabajadas", "diferencia", "inicio_ruta"]
 
 def cargar_registros() -> list:
     ws = get_ws("registros")
@@ -263,30 +268,16 @@ def cargar_registros() -> list:
                 "horas_trabajadas": float(r.get("horas_trabajadas", 0) or 0),
                 "diferencia": float(r.get("diferencia", 0) or 0),
                 "inicio_ruta": r.get("inicio_ruta", ""),
-                "fin_ruta": r.get("fin_ruta", ""),
             })
         except Exception:
             continue
     return result
 
-def _ensure_headers(ws, cols: list):
-    """Agrega encabezados faltantes automaticamente sin borrar datos."""
-    vals = ws.get_all_values()
-    if not vals:
-        ws.append_row(cols)
-        st.cache_data.clear()
-        return
-    existing = vals[0]
-    for col in cols:
-        if col not in existing:
-            col_idx = len(existing) + 1
-            ws.update_cell(1, col_idx, col)
-            existing.append(col)
-    st.cache_data.clear()
-
 def _init_registros_ws():
     ws = get_ws("registros")
-    _ensure_headers(ws, COLS_REG)
+    if not ws.get_all_values():
+        ws.append_row(COLS_REG)
+        st.cache_data.clear()
 
 def guardar_registro(reg: dict):
     ws = get_ws("registros")
@@ -307,7 +298,6 @@ def guardar_registro(reg: dict):
         reg["horas_trabajadas"],
         reg["diferencia"],
         reg.get("inicio_ruta", ""),
-        reg.get("fin_ruta", ""),
     ])
     st.cache_data.clear()
     return True, "OK"
@@ -319,7 +309,7 @@ def actualizar_registro(reg_id: str, reg: dict):
         return False
     for i, row in enumerate(vals[1:], start=2):
         if len(row) > 0 and row[0] == reg_id:
-            ws.update(f"A{i}:J{i}", [[
+            ws.update(f"A{i}:I{i}", [[
                 reg_id,
                 reg["empleado_id"],
                 reg["nombre"],
@@ -329,7 +319,6 @@ def actualizar_registro(reg_id: str, reg: dict):
                 reg["horas_trabajadas"],
                 reg["diferencia"],
                 reg.get("inicio_ruta", ""),
-                reg.get("fin_ruta", ""),
             ]])
             st.cache_data.clear()
             return True
@@ -431,11 +420,7 @@ def pagina_registro():
     with col4:
         salida = st.text_input("Hora salida (HH:MM)", placeholder="16:00")
 
-    col5, col6 = st.columns(2)
-    with col5:
-        inicio_ruta = st.text_input("Inicio de ruta", placeholder="Casa / Oficina / Depósito")
-    with col6:
-        fin_ruta = st.text_input("Fin de ruta", placeholder="Casa / Oficina / Depósito")
+    inicio_ruta = st.text_input("Inicio de ruta", placeholder="Casa / Oficina / Depósito")
 
     if st.button("💾 Guardar registro", use_container_width=True):
         if not entrada or not salida:
@@ -456,7 +441,6 @@ def pagina_registro():
                         "horas_trabajadas": round(trabajado, 4),
                         "diferencia": round(diferencia, 4),
                         "inicio_ruta": inicio_ruta,
-                        "fin_ruta": fin_ruta,
                     })
                     if ok:
                         bal = decimal_a_hhmm(diferencia)
@@ -506,7 +490,6 @@ def pagina_historial():
         "Entrada": r["hora_entrada"],
         "Salida": r["hora_salida"],
         "Inicio Ruta": r["inicio_ruta"],
-        "Fin Ruta": r.get("fin_ruta", ""),
         "Trabajado": decimal_a_hhmm(r["horas_trabajadas"]),
         "Balance": decimal_a_hhmm(r["diferencia"]),
     } for r in filtrados])
@@ -543,10 +526,9 @@ def pagina_historial():
             with c1:
                 e_fecha = st.date_input("Fecha", value=datetime.strptime(g["fecha"], "%Y-%m-%d").date())
                 e_entrada = st.text_input("Entrada (HH:MM)", value=g["hora_entrada"])
-                e_inicio = st.text_input("Inicio de ruta", value=g.get("inicio_ruta", ""))
             with c2:
+                e_inicio = st.text_input("Inicio de ruta", value=g.get("inicio_ruta", ""))
                 e_salida = st.text_input("Salida (HH:MM)", value=g["hora_salida"])
-                e_fin = st.text_input("Fin de ruta", value=g.get("fin_ruta", ""))
 
             guardar_btn = st.form_submit_button("💾 Guardar cambios", use_container_width=True)
             if guardar_btn:
@@ -564,7 +546,6 @@ def pagina_historial():
                             "horas_trabajadas": round(trabajado, 4),
                             "diferencia": round(diferencia, 4),
                             "inicio_ruta": e_inicio,
-                            "fin_ruta": e_fin,
                         })
                         if ok:
                             del st.session_state["editar_reg"]
@@ -652,7 +633,7 @@ def pagina_resumen():
 
         # Hoja Detalle
         ws2 = wb.create_sheet("Detalle")
-        headers2 = ["Técnico", "Fecha", "Entrada", "Salida", "Inicio Ruta", "Fin Ruta", "Trabajado", "Balance"]
+        headers2 = ["Técnico", "Fecha", "Entrada", "Salida", "Inicio Ruta", "Trabajado", "Balance"]
         ws2.append(headers2)
         for c in ws2[1]:
             c.font = Font(bold=True, color="FFFFFF")
@@ -661,7 +642,7 @@ def pagina_resumen():
         for r in sorted(filtrados, key=lambda x: (x["nombre"], x["fecha"])):
             ws2.append([
                 r["nombre"], r["fecha"], r["hora_entrada"], r["hora_salida"],
-                r.get("inicio_ruta", ""), r.get("fin_ruta", ""),
+                r.get("inicio_ruta", ""),
                 decimal_a_hhmm(r["horas_trabajadas"]),
                 decimal_a_hhmm(r["diferencia"]),
             ])
