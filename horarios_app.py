@@ -247,7 +247,7 @@ def actualizar_empleado(emp_id: str, emp: dict):
 # ══════════════════════════════════════════════════════════════════
 # DATOS: REGISTROS
 # ══════════════════════════════════════════════════════════════════
-COLS_REG = ["id", "empleado_id", "nombre", "fecha", "hora_entrada", "hora_salida", "horas_trabajadas", "diferencia", "inicio_ruta", "fin_ruta"]
+COLS_REG = ["id", "empleado_id", "nombre", "fecha", "hora_entrada", "hora_salida", "horas_trabajadas", "diferencia", "inicio_ruta", "fin_ruta", "cargado_por", "detalle"]
 
 @st.cache_data(ttl=10)
 def cargar_registros() -> list:
@@ -267,6 +267,8 @@ def cargar_registros() -> list:
                 "diferencia": float(r.get("diferencia", 0) or 0),
                 "inicio_ruta": r.get("inicio_ruta", ""),
                 "fin_ruta": r.get("fin_ruta", ""),
+                "cargado_por": r.get("cargado_por", ""),
+                "detalle": r.get("detalle", ""),
             })
         except Exception:
             continue
@@ -309,6 +311,8 @@ def guardar_registro(reg: dict):
         reg["diferencia"],
         reg.get("inicio_ruta", ""),
         reg.get("fin_ruta", ""),
+        reg.get("cargado_por", ""),
+        reg.get("detalle", ""),
     ])
     st.cache_data.clear()
     st.cache_resource.clear()
@@ -439,6 +443,8 @@ def pagina_registro():
     with col6:
         fin_ruta = st.text_input("Fin de ruta", placeholder="Casa / Oficina / Depósito")
 
+    detalle = st.text_input("Detalle", placeholder="Ej: Instalación, Mantenimiento, Visita...")
+
     if st.button("💾 Guardar registro", use_container_width=True):
         if not entrada or not salida:
             st.error("Completá la hora de entrada y salida.")
@@ -459,6 +465,8 @@ def pagina_registro():
                         "diferencia": round(diferencia, 4),
                         "inicio_ruta": inicio_ruta,
                         "fin_ruta": fin_ruta,
+                        "cargado_por": st.session_state.get("usuario", ""),
+                        "detalle": detalle,
                     })
                     if ok:
                         bal = decimal_a_hhmm(diferencia)
@@ -509,6 +517,8 @@ def pagina_historial():
         "Salida": r["hora_salida"],
         "Inicio Ruta": r["inicio_ruta"],
         "Fin Ruta": r.get("fin_ruta", ""),
+        "Detalle": r.get("detalle", ""),
+        "Cargado por": r.get("cargado_por", ""),
         "Trabajado": decimal_a_hhmm(r["horas_trabajadas"]),
         "Balance": decimal_a_hhmm(r["diferencia"]),
     } for r in filtrados])
@@ -654,7 +664,7 @@ def pagina_resumen():
 
         # Hoja Detalle
         ws2 = wb.create_sheet("Detalle")
-        headers2 = ["Técnico", "Fecha", "Entrada", "Salida", "Inicio Ruta", "Fin Ruta", "Trabajado", "Balance"]
+        headers2 = ["Técnico", "Fecha", "Entrada", "Salida", "Inicio Ruta", "Fin Ruta", "Detalle", "Cargado por", "Trabajado", "Balance"]
         ws2.append(headers2)
         for c in ws2[1]:
             c.font = Font(bold=True, color="FFFFFF")
@@ -664,6 +674,7 @@ def pagina_resumen():
             ws2.append([
                 r["nombre"], r["fecha"], r["hora_entrada"], r["hora_salida"],
                 r.get("inicio_ruta", ""), r.get("fin_ruta", ""),
+                r.get("detalle", ""), r.get("cargado_por", ""),
                 decimal_a_hhmm(r["horas_trabajadas"]),
                 decimal_a_hhmm(r["diferencia"]),
             ])
