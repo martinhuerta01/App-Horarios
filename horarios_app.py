@@ -291,13 +291,18 @@ def eliminar_registro(reg_id: str):
 
 
 # ══════════════════════════════════════════════════════════════════
-# DATOS: SERVICIOS
+# DATOS: SERVICIOS UNIFICADOS
+# Columnas: id, fecha, responsable, hora, cliente, servicio,
+#           patente, estado, detalle, cargado_por
 # ══════════════════════════════════════════════════════════════════
-COLS_SERV = ["id","fecha","equipo","patente_equipo","hora","cliente","servicio",
-             "patente","detalles","estado","observaciones","cargado_por"]
+COLS_SERV_UNIF = ["id","fecha","responsable","hora","cliente","servicio",
+                  "patente","estado","detalle","cargado_por"]
+
+# Responsables disponibles (Equipos GBA + proveedores interior)
+RESPONSABLES = ["EQUIPO 1","EQUIPO 2","VITACO","ZARZA","TALLER INTERNO","OTRO"]
 
 def cargar_servicios() -> list:
-    ws = get_ws("servicios")
+    ws = get_ws("servicios_unificados")
     records = ws.get_all_records()
     result = []
     for r in records:
@@ -305,99 +310,11 @@ def cargar_servicios() -> list:
             result.append({
                 "id": str(r.get("id","")),
                 "fecha": r.get("fecha",""),
-                "equipo": r.get("equipo",""),
-                "patente_equipo": r.get("patente_equipo",""),
+                "responsable": r.get("responsable",""),
                 "hora": r.get("hora",""),
                 "cliente": r.get("cliente",""),
                 "servicio": r.get("servicio",""),
                 "patente": r.get("patente",""),
-                "detalles": r.get("detalles",""),
-                "estado": r.get("estado","PENDIENTE"),
-                "observaciones": r.get("observaciones",""),
-                "cargado_por": r.get("cargado_por",""),
-            })
-        except Exception:
-            continue
-    return result
-
-def _init_servicios_ws():
-    ws = get_ws("servicios")
-    if not ws.get_all_values():
-        ws.append_row(COLS_SERV)
-        st.cache_data.clear()
-
-def guardar_servicio(s: dict):
-    ws = get_ws("servicios")
-    if not ws.get_all_values():
-        ws.append_row(COLS_SERV)
-    ws.append_row([str(uuid.uuid4())[:8], s["fecha"], s["equipo"], s["patente_equipo"],
-                   s["hora"], s["cliente"], s["servicio"], s["patente"],
-                   s.get("detalles",""), s.get("estado","PENDIENTE"),
-                   s.get("observaciones",""), s.get("cargado_por","")])
-    st.cache_data.clear()
-
-def actualizar_estado_servicio(serv_id: str, nuevo_estado: str):
-    ws = get_ws("servicios")
-    vals = ws.get_all_values()
-    if not vals: return False
-    headers = vals[0]
-    try:
-        estado_col = headers.index("estado") + 1
-    except ValueError:
-        return False
-    for i, row in enumerate(vals[1:], start=2):
-        if len(row) > 0 and row[0] == serv_id:
-            ws.update_cell(i, estado_col, nuevo_estado)
-            st.cache_data.clear()
-            return True
-    return False
-
-def actualizar_servicio_completo(serv_id: str, s: dict):
-    ws = get_ws("servicios")
-    vals = ws.get_all_values()
-    if not vals: return False
-    for i, row in enumerate(vals[1:], start=2):
-        if len(row) > 0 and row[0] == serv_id:
-            ws.update(f"A{i}:L{i}", [[serv_id, s["fecha"], s["equipo"], s["patente_equipo"],
-                s["hora"], s["cliente"], s["servicio"], s["patente"],
-                s.get("detalles",""), s.get("estado","PENDIENTE"),
-                s.get("observaciones",""), s.get("cargado_por","")]])
-            st.cache_data.clear()
-            return True
-    return False
-
-def eliminar_servicio(serv_id: str):
-    ws = get_ws("servicios")
-    vals = ws.get_all_values()
-    if not vals: return
-    for i, row in enumerate(vals[1:], start=2):
-        if len(row) > 0 and row[0] == serv_id:
-            ws.delete_rows(i)
-            st.cache_data.clear()
-            return
-
-
-# ══════════════════════════════════════════════════════════════════
-# DATOS: SERVICIOS INTERIOR
-# ══════════════════════════════════════════════════════════════════
-COLS_INT = ["id","fecha","distrito","localidad","unidad","tipo_vehiculo",
-            "tipo_servicio","tecnico_taller","estado","detalle","cargado_por"]
-
-def cargar_servicios_interior() -> list:
-    ws = get_ws("servicios_interior")
-    records = ws.get_all_records()
-    result = []
-    for r in records:
-        try:
-            result.append({
-                "id": str(r.get("id","")),
-                "fecha": r.get("fecha",""),
-                "distrito": r.get("distrito",""),
-                "localidad": r.get("localidad",""),
-                "unidad": r.get("unidad",""),
-                "tipo_vehiculo": r.get("tipo_vehiculo",""),
-                "tipo_servicio": r.get("tipo_servicio",""),
-                "tecnico_taller": r.get("tecnico_taller",""),
                 "estado": r.get("estado","PENDIENTE"),
                 "detalle": r.get("detalle",""),
                 "cargado_por": r.get("cargado_por",""),
@@ -406,23 +323,27 @@ def cargar_servicios_interior() -> list:
             continue
     return result
 
-def _init_interior_ws():
-    ws = get_ws("servicios_interior")
+def _init_servicios_ws():
+    ws = get_ws("servicios_unificados")
     if not ws.get_all_values():
-        ws.append_row(COLS_INT)
+        ws.append_row(COLS_SERV_UNIF)
         st.cache_data.clear()
 
-def guardar_interior(s: dict):
-    ws = get_ws("servicios_interior")
+# Alias para compatibilidad con _init_interior_ws en main()
+def _init_interior_ws():
+    pass
+
+def guardar_servicio(s: dict):
+    ws = get_ws("servicios_unificados")
     if not ws.get_all_values():
-        ws.append_row(COLS_INT)
-    ws.append_row([str(uuid.uuid4())[:8], s["fecha"], s["distrito"], s["localidad"],
-                   s["unidad"], s["tipo_vehiculo"], s["tipo_servicio"], s["tecnico_taller"],
+        ws.append_row(COLS_SERV_UNIF)
+    ws.append_row([str(uuid.uuid4())[:8], s["fecha"], s["responsable"],
+                   s["hora"], s["cliente"], s["servicio"], s["patente"],
                    s.get("estado","PENDIENTE"), s.get("detalle",""), s.get("cargado_por","")])
     st.cache_data.clear()
 
-def actualizar_estado_interior(int_id: str, nuevo_estado: str):
-    ws = get_ws("servicios_interior")
+def actualizar_estado_servicio(serv_id: str, nuevo_estado: str):
+    ws = get_ws("servicios_unificados")
     vals = ws.get_all_values()
     if not vals: return False
     headers = vals[0]
@@ -431,21 +352,27 @@ def actualizar_estado_interior(int_id: str, nuevo_estado: str):
     except ValueError:
         return False
     for i, row in enumerate(vals[1:], start=2):
-        if len(row) > 0 and row[0] == int_id:
+        if len(row) > 0 and row[0] == serv_id:
             ws.update_cell(i, estado_col, nuevo_estado)
             st.cache_data.clear()
             return True
     return False
 
-def eliminar_interior(int_id: str):
-    ws = get_ws("servicios_interior")
+def eliminar_servicio(serv_id: str):
+    ws = get_ws("servicios_unificados")
     vals = ws.get_all_values()
     if not vals: return
     for i, row in enumerate(vals[1:], start=2):
-        if len(row) > 0 and row[0] == int_id:
+        if len(row) > 0 and row[0] == serv_id:
             ws.delete_rows(i)
             st.cache_data.clear()
             return
+
+# Aliases para compatibilidad con referencias antiguas
+def cargar_servicios_interior(): return []
+def guardar_interior(s): guardar_servicio(s)
+def actualizar_estado_interior(int_id, estado): return actualizar_estado_servicio(int_id, estado)
+def eliminar_interior(int_id): eliminar_servicio(int_id)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -566,16 +493,6 @@ MODULOS = [
         "subs": [
             ("serv_cargar", "➕  Cargar servicio"),
             ("serv_lista", "📋  Detalle / Lista"),
-        ]
-    },
-    {
-        "id": "interior",
-        "icon": "🗺️",
-        "label": "Servicios Interior",
-        "color": "#7c3aed",
-        "subs": [
-            ("int_cargar", "➕  Cargar servicio"),
-            ("int_lista", "📋  Detalle / Lista"),
         ]
     },
     {
@@ -1112,7 +1029,7 @@ def pagina_tecnicos():
 
 
 # ══════════════════════════════════════════════════════════════════
-# SERVICIOS: Cargar
+# SERVICIOS: Cargar (unificado)
 # ══════════════════════════════════════════════════════════════════
 def pagina_serv_cargar():
     st.markdown("### ➕ Cargar servicio")
@@ -1121,7 +1038,7 @@ def pagina_serv_cargar():
         with col1:
             s_fecha = st.date_input("Fecha", value=date.today())
         with col2:
-            s_equipo = st.selectbox("Equipo", list(EQUIPOS.keys()))
+            s_responsable = st.selectbox("Responsable", RESPONSABLES)
         with col3:
             s_hora = st.text_input("Hora (HH:MM)", placeholder="10:00")
 
@@ -1133,15 +1050,11 @@ def pagina_serv_cargar():
 
         col6, col7 = st.columns(2)
         with col6:
-            s_patente = st.text_input("Patente del vehículo", placeholder="HQT470")
+            s_patente = st.text_input("Patente", placeholder="HQT470 / KWN846")
         with col7:
-            s_detalles = st.text_input("Detalles", placeholder="GPS / CÁMARA / etc.")
-
-        col8, col9 = st.columns(2)
-        with col8:
             s_estado = st.selectbox("Estado", ESTADOS_SERVICIO)
-        with col9:
-            s_obs = st.text_input("Observaciones", placeholder="Dirección, contacto, etc.")
+
+        s_detalle = st.text_area("Detalle", placeholder="GPS, cámara, corte corriente, dirección, contacto...")
 
         if st.form_submit_button("💾 Guardar servicio", use_container_width=True):
             if not s_cliente:
@@ -1149,41 +1062,28 @@ def pagina_serv_cargar():
             else:
                 guardar_servicio({
                     "fecha": s_fecha.strftime("%Y-%m-%d"),
-                    "equipo": s_equipo,
-                    "patente_equipo": EQUIPOS[s_equipo],
+                    "responsable": s_responsable,
                     "hora": s_hora.strip(),
                     "cliente": s_cliente,
                     "servicio": s_servicio,
                     "patente": s_patente,
-                    "detalles": s_detalles,
                     "estado": s_estado,
-                    "observaciones": s_obs,
+                    "detalle": s_detalle,
                     "cargado_por": st.session_state.get("usuario",""),
                 })
                 st.success("✅ Servicio guardado.")
 
 
 # ══════════════════════════════════════════════════════════════════
-# SERVICIOS: Lista / Detalle
+# SERVICIOS: Lista / Detalle (unificado)
 # ══════════════════════════════════════════════════════════════════
-def estado_color(estado: str) -> str:
-    colores = {
-        "REALIZADO": "🟢",
-        "CONFIRMADO": "🔵",
-        "PENDIENTE": "🟡",
-        "SUSPENDIDO": "🔴",
-        "REPROGRAMADO": "🟠",
-    }
-    return colores.get(estado.upper(), "⚪")
-
 def pagina_serv_lista():
     st.markdown("### 📋 Detalle / Lista de servicios")
     servicios = cargar_servicios()
 
-    # Filtros
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        filtro_equipo = st.selectbox("Equipo", ["Todos"] + list(EQUIPOS.keys()))
+        filtro_resp = st.selectbox("Responsable", ["Todos"] + RESPONSABLES)
     with col2:
         filtro_desde = st.date_input("Desde", value=date.today().replace(day=1))
     with col3:
@@ -1194,8 +1094,8 @@ def pagina_serv_lista():
     filtro_cliente = st.text_input("Buscar cliente", placeholder="Escribí parte del nombre...")
 
     filtrados = servicios
-    if filtro_equipo != "Todos":
-        filtrados = [s for s in filtrados if s["equipo"] == filtro_equipo]
+    if filtro_resp != "Todos":
+        filtrados = [s for s in filtrados if s["responsable"] == filtro_resp]
     if filtro_estado != "Todos":
         filtrados = [s for s in filtrados if s["estado"].upper() == filtro_estado]
     if filtro_cliente:
@@ -1207,31 +1107,26 @@ def pagina_serv_lista():
         st.info("No hay servicios con ese filtro.")
         return
 
-    # Métricas rápidas
     m1,m2,m3,m4,m5 = st.columns(5)
     m1.metric("Total", len(filtrados))
-    m2.metric("🟢 Realizados", sum(1 for s in filtrados if s["estado"].upper()=="REALIZADO"))
+    m2.metric("🟢 Realizados",  sum(1 for s in filtrados if s["estado"].upper()=="REALIZADO"))
     m3.metric("🔵 Confirmados", sum(1 for s in filtrados if s["estado"].upper()=="CONFIRMADO"))
-    m4.metric("🟡 Pendientes", sum(1 for s in filtrados if s["estado"].upper()=="PENDIENTE"))
+    m4.metric("🟡 Pendientes",  sum(1 for s in filtrados if s["estado"].upper()=="PENDIENTE"))
     m5.metric("🔴 Suspendidos", sum(1 for s in filtrados if s["estado"].upper() in ["SUSPENDIDO","REPROGRAMADO"]))
 
     st.markdown("---")
-
-    # Tabla editable para cambiar estado
-    st.markdown("#### Actualizar estados")
-    st.caption("Editá el estado directamente en la tabla y hacé click en Guardar cambios.")
+    st.caption("Cambiá el estado directamente en la tabla y hacé click en Guardar cambios.")
 
     df_edit = pd.DataFrame([{
-        "id": s["id"],
-        "Fecha": s["fecha"],
-        "Equipo": s["equipo"],
-        "Hora": s["hora"],
-        "Cliente": s["cliente"],
-        "Servicio": s["servicio"],
-        "Patente": s["patente"],
-        "Detalles": s["detalles"],
-        "Estado": s["estado"],
-        "Observaciones": s["observaciones"],
+        "id":          s["id"],
+        "Fecha":       s["fecha"],
+        "Responsable": s["responsable"],
+        "Hora":        s["hora"],
+        "Cliente":     s["cliente"],
+        "Servicio":    s["servicio"],
+        "Patente":     s["patente"],
+        "Estado":      s["estado"],
+        "Detalle":     s["detalle"],
     } for s in filtrados])
 
     edited_df = st.data_editor(
@@ -1239,19 +1134,14 @@ def pagina_serv_lista():
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Estado": st.column_config.SelectboxColumn(
-                "Estado",
-                options=ESTADOS_SERVICIO,
-                required=True,
-            ),
-            "Fecha": st.column_config.TextColumn("Fecha", disabled=True),
-            "Equipo": st.column_config.TextColumn("Equipo", disabled=True),
-            "Hora": st.column_config.TextColumn("Hora", disabled=True),
-            "Cliente": st.column_config.TextColumn("Cliente", disabled=True),
-            "Servicio": st.column_config.TextColumn("Servicio", disabled=True),
-            "Patente": st.column_config.TextColumn("Patente", disabled=True),
-            "Detalles": st.column_config.TextColumn("Detalles", disabled=True),
-            "Observaciones": st.column_config.TextColumn("Observaciones", disabled=True),
+            "Estado":      st.column_config.SelectboxColumn("Estado", options=ESTADOS_SERVICIO, required=True),
+            "Fecha":       st.column_config.TextColumn("Fecha",       disabled=True),
+            "Responsable": st.column_config.TextColumn("Responsable", disabled=True),
+            "Hora":        st.column_config.TextColumn("Hora",        disabled=True),
+            "Cliente":     st.column_config.TextColumn("Cliente",     disabled=True),
+            "Servicio":    st.column_config.TextColumn("Servicio",    disabled=True),
+            "Patente":     st.column_config.TextColumn("Patente",     disabled=True),
+            "Detalle":     st.column_config.TextColumn("Detalle",     disabled=True),
         }
     )
 
@@ -1259,10 +1149,8 @@ def pagina_serv_lista():
         cambios = 0
         for i, row in edited_df.iterrows():
             serv_id = df_edit.iloc[i]["id"]
-            estado_nuevo = row["Estado"]
-            estado_original = df_edit.iloc[i]["Estado"]
-            if estado_nuevo != estado_original:
-                actualizar_estado_servicio(serv_id, estado_nuevo)
+            if row["Estado"] != df_edit.iloc[i]["Estado"]:
+                actualizar_estado_servicio(serv_id, row["Estado"])
                 cambios += 1
         if cambios > 0:
             st.success(f"✅ {cambios} estado(s) actualizado(s).")
@@ -1270,162 +1158,19 @@ def pagina_serv_lista():
         else:
             st.info("No hubo cambios.")
 
-    # Eliminar
     st.markdown("---")
     st.markdown("**Eliminar un servicio**")
-    opciones_del = [f"{s['fecha']} | {s['equipo']} | {s['hora']} | {s['cliente']}" for s in filtrados]
+    opciones_del = [f"{s['fecha']} | {s['responsable']} | {s['hora']} | {s['cliente']}" for s in filtrados]
     sel_del = st.selectbox("Seleccioná un servicio", opciones_del, key="del_serv")
     if st.button("🗑️ Eliminar seleccionado", key="btn_del_serv"):
-        idx_del = opciones_del.index(sel_del)
-        eliminar_servicio(filtrados[idx_del]["id"])
+        eliminar_servicio(filtrados[opciones_del.index(sel_del)]["id"])
         st.success("Servicio eliminado.")
         st.rerun()
 
 
-# ══════════════════════════════════════════════════════════════════
-# SERVICIOS INTERIOR: Cargar
-# ══════════════════════════════════════════════════════════════════
-def pagina_int_cargar():
-    st.markdown("### ➕ Cargar servicio interior")
-    with st.form("form_int_nuevo", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            i_fecha = st.date_input("Fecha", value=date.today())
-        with col2:
-            i_tecnico = st.text_input("Técnico / Taller *", placeholder="Eduardo Zarza / Vitaco / Taller")
-
-        col3, col4 = st.columns(2)
-        with col3:
-            i_distrito = st.text_input("Distrito / Cliente", placeholder="La Serenísima / MANTELECTRIC")
-        with col4:
-            i_localidad = st.text_input("Localidad", placeholder="CD Rosario / Córdoba")
-
-        col5, col6 = st.columns(2)
-        with col5:
-            i_unidad = st.text_input("Unidad / Patente", placeholder="KWN846 / AF104TN")
-        with col6:
-            i_tipo_veh = st.selectbox("Tipo de vehículo", ["CHASIS","PICK-UP","AUTOMOVIL","SEMI","MOTO","OTRO"])
-
-        col7, col8 = st.columns(2)
-        with col7:
-            i_tipo_serv = st.selectbox("Tipo de servicio", ["Instalación","Desinstalación","Revisión","Mantenimiento","Otro"])
-        with col8:
-            i_estado = st.selectbox("Estado", ESTADOS_SERVICIO)
-
-        i_detalle = st.text_area("Detalle", placeholder="GPS, corte corriente, botón de pánico...")
-
-        if st.form_submit_button("💾 Guardar", use_container_width=True):
-            if not i_tecnico:
-                st.error("El técnico / taller es obligatorio.")
-            else:
-                guardar_interior({
-                    "fecha": i_fecha.strftime("%Y-%m-%d"),
-                    "distrito": i_distrito,
-                    "localidad": i_localidad,
-                    "unidad": i_unidad,
-                    "tipo_vehiculo": i_tipo_veh,
-                    "tipo_servicio": i_tipo_serv,
-                    "tecnico_taller": i_tecnico,
-                    "estado": i_estado,
-                    "detalle": i_detalle,
-                    "cargado_por": st.session_state.get("usuario",""),
-                })
-                st.success("✅ Servicio interior guardado.")
-
-
-# ══════════════════════════════════════════════════════════════════
-# SERVICIOS INTERIOR: Lista
-# ══════════════════════════════════════════════════════════════════
-def pagina_int_lista():
-    st.markdown("### 📋 Detalle / Lista — Servicios Interior")
-    servicios = cargar_servicios_interior()
-
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        filtro_desde = st.date_input("Desde", value=date.today().replace(day=1))
-    with col2:
-        filtro_hasta = st.date_input("Hasta", value=date.today())
-    with col3:
-        filtro_estado = st.selectbox("Estado", ["Todos"] + ESTADOS_SERVICIO)
-    with col4:
-        filtro_tecnico = st.text_input("Técnico / Taller", placeholder="Nombre...")
-
-    filtro_cliente = st.text_input("Distrito / Cliente", placeholder="La Serenísima / MANTELECTRIC...")
-
-    filtrados = servicios
-    if filtro_estado != "Todos":
-        filtrados = [s for s in filtrados if s["estado"].upper() == filtro_estado]
-    if filtro_tecnico:
-        filtrados = [s for s in filtrados if filtro_tecnico.lower() in s["tecnico_taller"].lower()]
-    if filtro_cliente:
-        filtrados = [s for s in filtrados if filtro_cliente.lower() in s["distrito"].lower()]
-    filtrados = [s for s in filtrados if filtro_desde.strftime("%Y-%m-%d") <= s["fecha"] <= filtro_hasta.strftime("%Y-%m-%d")]
-    filtrados = sorted(filtrados, key=lambda x: x["fecha"], reverse=True)
-
-    if not filtrados:
-        st.info("No hay servicios con ese filtro.")
-        return
-
-    m1,m2,m3 = st.columns(3)
-    m1.metric("Total", len(filtrados))
-    m2.metric("🟢 Realizados", sum(1 for s in filtrados if s["estado"].upper()=="REALIZADO"))
-    m3.metric("🟡 Pendientes", sum(1 for s in filtrados if s["estado"].upper()=="PENDIENTE"))
-
-    st.markdown("---")
-    st.markdown("#### Actualizar estados")
-
-    df_edit = pd.DataFrame([{
-        "id": s["id"],
-        "Fecha": s["fecha"],
-        "Distrito": s["distrito"],
-        "Localidad": s["localidad"],
-        "Unidad": s["unidad"],
-        "Tipo Vehículo": s["tipo_vehiculo"],
-        "Tipo Servicio": s["tipo_servicio"],
-        "Técnico / Taller": s["tecnico_taller"],
-        "Estado": s["estado"],
-        "Detalle": s["detalle"],
-    } for s in filtrados])
-
-    edited_df = st.data_editor(
-        df_edit.drop(columns=["id"]),
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Estado": st.column_config.SelectboxColumn("Estado", options=ESTADOS_SERVICIO, required=True),
-            "Fecha": st.column_config.TextColumn("Fecha", disabled=True),
-            "Distrito": st.column_config.TextColumn("Distrito", disabled=True),
-            "Localidad": st.column_config.TextColumn("Localidad", disabled=True),
-            "Unidad": st.column_config.TextColumn("Unidad", disabled=True),
-            "Tipo Vehículo": st.column_config.TextColumn("Tipo Vehículo", disabled=True),
-            "Tipo Servicio": st.column_config.TextColumn("Tipo Servicio", disabled=True),
-            "Técnico / Taller": st.column_config.TextColumn("Técnico / Taller", disabled=True),
-            "Detalle": st.column_config.TextColumn("Detalle", disabled=True),
-        }
-    )
-
-    if st.button("💾 Guardar cambios de estado", use_container_width=True, key="save_int"):
-        cambios = 0
-        for i, row in edited_df.iterrows():
-            int_id = df_edit.iloc[i]["id"]
-            estado_nuevo = row["Estado"]
-            if estado_nuevo != df_edit.iloc[i]["Estado"]:
-                actualizar_estado_interior(int_id, estado_nuevo)
-                cambios += 1
-        if cambios > 0:
-            st.success(f"✅ {cambios} estado(s) actualizado(s).")
-            st.rerun()
-        else:
-            st.info("No hubo cambios.")
-
-    st.markdown("---")
-    opciones_del = [f"{s['fecha']} | {s['distrito']} | {s['unidad']} | {s['tecnico_taller']}" for s in filtrados]
-    sel_del = st.selectbox("Seleccioná para eliminar", opciones_del)
-    if st.button("🗑️ Eliminar seleccionado", key="del_int"):
-        idx_del = opciones_del.index(sel_del)
-        eliminar_interior(filtrados[idx_del]["id"])
-        st.success("Eliminado.")
-        st.rerun()
+# Aliases para rutas antiguas (por si quedan referencias)
+def pagina_int_cargar(): st.session_state["pagina"] = "serv_cargar"; st.rerun()
+def pagina_int_lista():  st.session_state["pagina"] = "serv_lista";  st.rerun()
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -1698,7 +1443,6 @@ def main():
     _init_empleados_ws()
     _init_registros_ws()
     _init_servicios_ws()
-    _init_interior_ws()
     _init_stock_ws()
 
     render_sidebar()
@@ -1713,8 +1457,6 @@ def main():
         "tecnicos": pagina_tecnicos,
         "serv_cargar": pagina_serv_cargar,
         "serv_lista": pagina_serv_lista,
-        "int_cargar": pagina_int_cargar,
-        "int_lista": pagina_int_lista,
         "stock_actual": pagina_stock_actual,
         "stock_entrada": pagina_stock_entrada,
         "stock_salida": pagina_stock_salida,
