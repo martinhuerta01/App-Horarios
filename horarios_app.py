@@ -83,26 +83,11 @@ hr { border-color: #e2e6ea !important; }
 .stError { background: #fef2f2 !important; border: 1px solid #fca5a5 !important; color: #991b1b !important; border-radius: 8px !important; }
 .stWarning { background: #fffbeb !important; border: 1px solid #fcd34d !important; color: #92400e !important; border-radius: 8px !important; }
 
-/* Sidebar nav buttons */
+/* Sidebar nav buttons base */
 [data-testid="stSidebar"] .stButton > button {
-    background: transparent !important;
-    color: #374151 !important;
-    border: none !important;
     border-radius: 6px !important;
-    font-weight: 500 !important;
     text-align: left !important;
-    padding: 6px 10px !important;
     font-size: 13px !important;
-}
-[data-testid="stSidebar"] .stButton > button:hover {
-    background: #f3f4f6 !important;
-    color: #111827 !important;
-    transform: none !important;
-}
-[data-testid="stSidebar"] .stButton > button[kind="primary"] {
-    background: #eff6ff !important;
-    color: #1e3a8a !important;
-    font-weight: 600 !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -628,11 +613,25 @@ def render_sidebar():
                 modulo_activo = mod["id"]
                 break
 
+    # CSS específico para el sidebar con módulos
+    st.markdown("""
+    <style>
+    /* Botones de módulo (toggle) */
+    [data-testid="stSidebar"] [data-testid="stVerticalBlock"] > div:has(button[kind="secondary"]) button[kind="secondary"] {
+        text-align: left !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+    }
+    /* Ocultar el borde del sidebar button cuando es módulo activo */
+    .mod-active button { background: #1e3a8a !important; color: white !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
     with st.sidebar:
         # Header
         st.markdown(f"""
-        <div style='padding:20px 16px 12px; border-bottom:1px solid #f0f0f0; margin-bottom:8px'>
-            <div style='font-size:20px; font-weight:700; color:#111827'>⚙️ Panel de Control</div>
+        <div style='padding:16px 4px 12px; border-bottom:1px solid #f0f0f0; margin-bottom:12px'>
+            <div style='font-size:18px; font-weight:700; color:#111827'>⚙️ Panel de Control</div>
             <div style='font-size:12px; color:#9ca3af; margin-top:2px'>Usuario: {usuario}</div>
         </div>
         """, unsafe_allow_html=True)
@@ -642,39 +641,57 @@ def render_sidebar():
             color = mod["color"]
             icon = mod["icon"]
             label = mod["label"]
-
-            # Encabezado del módulo (clickeable)
-            bg = color if is_open else "transparent"
-            txt_color = "#ffffff" if is_open else "#374151"
             arrow = "▲" if is_open else "▼"
 
+            # Inyectar CSS dinámico para este botón específico
+            btn_key = f"toggle_{mod['id']}"
+            bg = color if is_open else "#f3f4f6"
+            txt = "#ffffff" if is_open else "#111827"
             st.markdown(f"""
-            <div style='background:{bg}; color:{txt_color}; border-radius:8px;
-                        padding:9px 12px; margin:2px 0; cursor:pointer;
-                        display:flex; justify-content:space-between; align-items:center;
-                        font-weight:600; font-size:14px;'>
-                <span>{icon} {label}</span>
-                <span style='font-size:10px; opacity:0.7'>{arrow}</span>
-            </div>
+            <style>
+            div[data-testid="stSidebar"] button[kind="secondary"][data-testid*="{btn_key}"],
+            div[data-testid="stSidebar"] div:has(> div > button[aria-label="{icon} {label} {arrow}"]) button {{
+                background: {bg} !important;
+                color: {txt} !important;
+                border: none !important;
+                font-weight: 700 !important;
+                font-size: 13px !important;
+                text-align: left !important;
+                padding: 8px 12px !important;
+                margin-bottom: 2px !important;
+            }}
+            </style>
             """, unsafe_allow_html=True)
 
-            # Botón invisible para toggle
-            if st.button(f"{icon} {label}", key=f"toggle_{mod['id']}", use_container_width=True):
+            # Botón del módulo (toggle)
+            if st.button(f"{icon}  {label}  {arrow}", key=btn_key, use_container_width=True):
                 st.session_state[f"mod_open_{mod['id']}"] = not is_open
                 st.rerun()
 
             # Submenús
             if is_open:
-                st.markdown(f"""
-                <div style='margin-left:12px; border-left:2px solid {color}40; padding-left:8px; margin-bottom:4px'>
-                """, unsafe_allow_html=True)
                 for sub_key, sub_label in mod["subs"]:
                     activo = pagina == sub_key
-                    btn_type = "primary" if activo else "secondary"
-                    if st.button(sub_label, key=f"nav_{sub_key}", use_container_width=True, type=btn_type):
-                        st.session_state["pagina"] = sub_key
-                        st.rerun()
-                st.markdown("</div>", unsafe_allow_html=True)
+                    # CSS para submenú activo
+                    if activo:
+                        st.markdown(f"""
+                        <style>
+                        div[data-testid="stSidebar"] button[aria-label="{sub_label}"] {{
+                            background: {color}18 !important;
+                            color: {color} !important;
+                            font-weight: 600 !important;
+                            border-left: 3px solid {color} !important;
+                        }}
+                        </style>
+                        """, unsafe_allow_html=True)
+                    # Indentación visual con columnas
+                    c_indent, c_btn = st.columns([0.08, 0.92])
+                    with c_btn:
+                        if st.button(sub_label, key=f"nav_{sub_key}", use_container_width=True):
+                            st.session_state["pagina"] = sub_key
+                            st.rerun()
+
+                st.markdown("<div style='margin-bottom:4px'></div>", unsafe_allow_html=True)
 
         st.markdown("---")
         if st.button("🚪 Cerrar sesión", use_container_width=True):
