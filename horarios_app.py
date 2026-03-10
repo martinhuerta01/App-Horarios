@@ -61,13 +61,16 @@ code, .mono { font-family: 'DM Mono', monospace; }
 
 .stButton > button {
     background: #1e3a8a !important;
-    color: white !important;
+    color: #ffffff !important;
     border: none !important;
     border-radius: 8px !important;
     font-weight: 600 !important;
     transition: all 0.2s !important;
 }
-.stButton > button:hover { background: #2745a7 !important; transform: translateY(-1px); }
+.stButton > button * { color: #ffffff !important; }
+.stButton > button:hover { background: #2745a7 !important; transform: translateY(-1px); color: #ffffff !important; }
+.stButton > button[kind="secondary"] { background: #1f2937 !important; color: #ffffff !important; }
+.stButton > button[kind="secondary"]:hover { background: #374151 !important; color: #ffffff !important; }
 
 .stTextInput > div > div > input,
 .stNumberInput > div > div > input,
@@ -517,10 +520,10 @@ def pagina_historial():
         "Salida": r["hora_salida"],
         "Inicio Ruta": r["inicio_ruta"],
         "Fin Ruta": r.get("fin_ruta", ""),
-        "Detalle": r.get("detalle", ""),
-        "Cargado por": r.get("cargado_por", ""),
         "Trabajado": decimal_a_hhmm(r["horas_trabajadas"]),
         "Balance": decimal_a_hhmm(r["diferencia"]),
+        "Detalle": r.get("detalle", ""),
+        "Cargado por": r.get("cargado_por", ""),
     } for r in filtrados])
 
     st.dataframe(df.drop(columns=["ID"]), use_container_width=True, hide_index=True)
