@@ -17,16 +17,16 @@ from db.stock      import _init_stock_ws
 from db.usuarios   import validar_usuario
 
 # ── Pages ──────────────────────────────────────────────────────────
-from pages.horarios  import (
+from modules.horarios  import (
     pagina_registro, pagina_historial, pagina_resumen,
     pagina_estadisticas, pagina_tecnicos,
 )
-from pages.servicios import pagina_serv_cargar, pagina_serv_lista
-from pages.stock     import (
+from modules.servicios import pagina_serv_cargar, pagina_serv_lista
+from modules.stock     import (
     pagina_stock_actual, pagina_stock_entrada,
     pagina_stock_salida, pagina_stock_productos,
 )
-from pages.reportes  import pagina_reporte_cruzado
+from modules.reportes  import pagina_reporte_cruzado
 
 # Mapa de rutas — agregá acá cuando crees nuevas páginas
 RUTAS = {
